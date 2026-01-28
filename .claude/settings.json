@@ -1,0 +1,40 @@
+{
+  "permissions": {
+    "defaultMode": "default",
+    "rules": [
+      {
+        "working_directory": "ecommerce-api/src/core/**",
+        "defaultMode": "plan",
+        "reason": "Core business logic needs careful review before modification"
+      },
+      {
+        "working_directory": "ecommerce-api/tests/**",
+        "defaultMode": "acceptEdits",
+        "reason": "Tests are safe to modify quickly for iteration"
+      },
+      {
+        "working_directory": "**/*.config.js",
+        "defaultMode": "default",
+        "reason": "Configuration files require explicit approval"
+      }
+    ]
+  },
+  "hooks": {
+    "PostToolUse": [
+      {
+        "matcher": "Write|Edit",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "echo '[$(date)] Modified: $FILE_PATH' >> .claude/audit.log",
+            "continueOnError": true
+          }
+        ]
+      }
+    ]
+  },
+  "env": {
+    "MAX_THINKING_TOKENS": "10000"
+  },
+  "alwaysThinkingEnabled": false
+}
