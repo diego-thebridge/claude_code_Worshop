@@ -7,10 +7,10 @@ Este proyecto es una API REST simplificada de e-commerce diseñada específicame
 Este proyecto está diseñado para practicar:
 
 1. **Plan Mode**: Analizar y planear refactorizaciones complejas
-2. **MCP Integration**: Conectar Claude Code con databases y external APIs
+2. **CLI Power Tools**: Usar `claude -p`, pipes, y output formats para automatización
 3. **Custom Agents**: Crear agentes de seguridad y testing
 4. **Skills**: Definir standards de code review
-5. **Git Workflows**: Commits, PRs, y automation
+5. **Automation**: Hooks, scripts, y CLAUDE.md para workflows de desarrollo
 
 ## 📋 Stack Tecnológico
 
@@ -214,24 +214,19 @@ async function getOrdersWithProducts(req, res) {
 - Incluye migration strategy para usuarios existentes
 - Define testing approach
 
-### Ejercicio 2: MCP Integration - Database + GitHub
-**Objetivo**: Conectar MCP servers y resolver tarea que require ambos.
+### Ejercicio 2: CLI Power Tools
+**Objetivo**: Dominar `claude -p`, pipes, output formats y slash commands.
 
-**Setup**:
+**Tareas**:
 ```bash
-# PostgreSQL MCP server
-claude mcp add --transport stdio db -- npx -y @bytebase/dbhub \
-  --dsn "postgresql://localhost:5432/ecommerce"
+# Análisis directo con claude -p
+claude -p "List all API endpoints with HTTP methods and file locations. Output as markdown table."
 
-# GitHub MCP server
-claude mcp add --transport http github https://api.githubcopilot.com/mcp/
-```
+# Pipes con Unix
+git diff --name-only HEAD~3 | claude -p "Review these changed files for bugs or security issues."
 
-**Tarea**:
-```
-> Query the database to find products with zero inventory
-> Create a GitHub issue listing these products with their details
-> Tag it with "inventory" and "urgent" labels
+# Output formats
+claude -p "Find all TODO comments in the codebase" --output-format json
 ```
 
 ### Ejercicio 3: Custom Agent - Security Auditor
@@ -277,31 +272,22 @@ claude mcp add --transport http github https://api.githubcopilot.com/mcp/
 ❌ Failures: [list with file:line]
 ```
 
-### Ejercicio 5: CI/CD Automation
-**Objetivo**: Crear scripts de automation para CI/CD.
+### Ejercicio 5: Automation con Hooks y Scripts
+**Objetivo**: Configurar hooks, npm scripts, y CLAUDE.md para automatizar workflows.
 
 **Tareas**:
 
-1. **Pre-commit hook** (package.json script):
+1. **Hooks en settings.json** para logging automático de cambios
+2. **npm scripts** para reviews y auditorías rápidas:
 ```json
 {
   "scripts": {
-    "pre-commit": "claude -p 'Review staged changes for security issues and code style'"
+    "review": "claude -p 'Review staged changes for security issues' --output-format text",
+    "audit:security": "claude -p 'Scan src/ for OWASP Top 10 vulnerabilities' --output-format text"
   }
 }
 ```
-
-2. **PR review automation** (GitHub Actions):
-```yaml
-- name: Claude Code Review
-  run: |
-    claude -p "Review the changes vs main branch. Focus on security, performance, and best practices. Output findings in markdown."
-```
-
-3. **Auto-translate new strings**:
-```bash
-claude -p "Find new strings in src/locales/en.json that don't exist in es.json, fr.json, de.json. Translate and update the files."
-```
+3. **CLAUDE.md** con contexto y standards del proyecto
 
 ## 🚀 Cómo Ejecutar el Proyecto
 
