@@ -5,13 +5,13 @@ Este documento contiene 5 ejercicios prácticos diseñados para dominar las capa
 **Tiempo total estimado**: 45-55 minutos
 **Prerequisitos**: Haber completado el setup en README.md
 
-## 📋 Índice de Ejercicios
+## Índice de Ejercicios
 
 1. [Ejercicio 1: Plan Mode Challenge](#ejercicio-1-plan-mode-challenge) (10 min)
-2. [Ejercicio 2: MCP Integration](#ejercicio-2-mcp-integration) (10 min)
+2. [Ejercicio 2: CLI Power Tools](#ejercicio-2-cli-power-tools) (10 min)
 3. [Ejercicio 3: Custom Security Agent](#ejercicio-3-custom-security-agent) (10 min)
 4. [Ejercicio 4: Team Code Review Skill](#ejercicio-4-team-code-review-skill) (8 min)
-5. [Ejercicio 5: CI/CD Automation](#ejercicio-5-cicd-automation) (5-7 min)
+5. [Ejercicio 5: Automation con Hooks y Scripts](#ejercicio-5-automation-con-hooks-y-scripts) (7 min)
 
 ---
 
@@ -120,176 +120,160 @@ Al finalizar este ejercicio, deberías tener un documento/plan que podría usar 
 
 ---
 
-## Ejercicio 2: MCP Integration
+## Ejercicio 2: CLI Power Tools
 
 **Tiempo**: 10 minutos
-**Dificultad**: ⭐⭐⭐⭐
-**Objetivo**: Conectar Claude Code con external tools usando MCP servers
+**Dificultad**: ⭐⭐⭐
+**Objetivo**: Dominar `claude -p`, pipes, output formats y slash commands para automatización
 
 ### Contexto
 
-Necesitas generar un reporte de productos con problemas de inventario. El reporte debe:
-1. Consultar la base de datos PostgreSQL para encontrar productos con stock bajo (<5 unidades)
-2. Crear un GitHub issue con la lista de estos productos
-3. Agregar labels "inventory" y "urgent" al issue
-
-### Prerequisitos
-
-- Base de datos PostgreSQL corriendo (Docker Compose)
-- GitHub personal access token con scope `repo`
+Claude Code no es solo una herramienta interactiva — su CLI es extremadamente poderosa para automatización. En este ejercicio vas a usar `claude -p` (prompt directo), pipes de Unix, y diferentes output formats para crear workflows de análisis automatizados sin necesidad de configurar servicios externos.
 
 ### Instrucciones Paso a Paso
 
-#### Paso 1: Configurar MCP Server para PostgreSQL
+#### Paso 1: Análisis rápido con `claude -p`
 
-Primero, configura el MCP server para tu base de datos:
+Desde el directorio `ecommerce-api`, ejecuta un análisis directo sin entrar al modo interactivo:
 
-```bash
-claude mcp add --transport stdio db -- npx -y @bytebase/dbhub \
-  --dsn "postgresql://admin:password123@localhost:5432/ecommerce"
-```
-
-**Verificar la conexión**:
-```bash
-claude
-> /mcp
-```
-
-Deberías ver el server "db" listado. Selecciónalo y verifica que se conecta correctamente.
-
-#### Paso 2: Configurar MCP Server para GitHub
-
-Agrega el GitHub MCP server:
-
-```bash
-claude mcp add --transport http github https://api.githubcopilot.com/mcp/
-```
-
-**Autenticar** (si es necesario):
-```bash
-claude
-> /mcp
-# Selecciona "github" y sigue el flow de autenticación
-```
-
-#### Paso 3: Verificar Ambos Servers
-
-Lista los MCP servers configurados:
-```bash
-claude mcp list
-```
-
-Deberías ver:
-```
-db (stdio) - Connected
-github (http) - Connected
-```
-
-#### Paso 4: Ejecutar la Tarea Integrativa
-
-Inicia Claude Code (modo normal, NO plan mode):
 ```bash
 cd ecommerce-api
+claude -p "List all API endpoints in this project with their HTTP methods and file locations. Output as a markdown table."
+```
+
+Observa cómo Claude analiza el codebase y responde directamente en tu terminal.
+
+#### Paso 2: Usar output formats
+
+Ahora prueba diferentes formatos de salida:
+
+```bash
+# Output como JSON (útil para parsear programáticamente)
+claude -p "Find all TODO and FIXME comments in the codebase. Return as JSON with fields: file, line, comment" --output-format json
+
+# Output como texto plano (útil para pipes)
+claude -p "Summarize the security issues in this codebase in 3 bullet points" --output-format text
+```
+
+#### Paso 3: Combinar con pipes de Unix
+
+Usa pipes para crear workflows más potentes:
+
+```bash
+# Analizar solo los archivos modificados en git
+git diff --name-only HEAD~3 | claude -p "Review these changed files for potential bugs or security issues. Be concise."
+
+# Analizar el output de tests
+npm test 2>&1 | claude -p "Analyze these test results. List which tests failed and suggest fixes."
+
+# Revisar dependencias
+cat package.json | claude -p "Review these dependencies. Flag any that are commonly known to have security issues or are deprecated."
+```
+
+#### Paso 4: Batch processing con scripts
+
+Crea un mini-script que combine varias operaciones CLI:
+
+```bash
+# Crear un reporte de calidad del código
+echo "=== Code Quality Report ===" > /tmp/quality-report.md
+echo "Generated: $(date)" >> /tmp/quality-report.md
+echo "" >> /tmp/quality-report.md
+
+# Análisis de seguridad
+claude -p "Scan src/ for hardcoded secrets, SQL injection, and missing input validation. List findings with file:line format." --output-format text >> /tmp/quality-report.md
+
+echo "" >> /tmp/quality-report.md
+echo "---" >> /tmp/quality-report.md
+
+# Análisis de code style
+claude -p "Check src/ for functions longer than 50 lines, files longer than 300 lines, and naming convention violations. Be concise." --output-format text >> /tmp/quality-report.md
+
+# Ver el reporte
+cat /tmp/quality-report.md
+```
+
+#### Paso 5: Usar slash commands en modo interactivo
+
+Entra a modo interactivo y prueba los slash commands más útiles:
+
+```bash
 claude
 ```
 
-Escribe el prompt:
+Dentro de la sesión:
 ```
-Using the MCP servers:
+> /cost
+# Ver cuánto has gastado en esta sesión
 
-1. Query the database to find all products where stock < 5
-2. Create a detailed report with: product ID, name, current stock, price
-3. Create a GitHub issue in this repository titled "Low Inventory Alert - [Date]"
-4. In the issue body, include:
-   - Summary of how many products are affected
-   - Table with product details
-   - Suggested action items
-5. Add labels "inventory" and "urgent" to the issue
+> /context
+# Ver cuánto contexto queda disponible
 
-After creating the issue, share the URL with me.
+> /memory
+# Ver y editar lo que Claude recuerda del proyecto (CLAUDE.md)
+
+> /skills
+# Ver skills disponibles
+
+> /agents
+# Ver agents disponibles
 ```
-
-#### Paso 5: Observar el Workflow Multi-MCP
-
-Claude debería:
-1. Conectarse al database MCP server
-2. Ejecutar la query SQL
-3. Procesar los resultados
-4. Conectarse al GitHub MCP server
-5. Crear el issue con el formato especificado
-6. Agregar los labels
-7. Devolverte el URL del issue creado
 
 ### Criterios de Éxito
 
-- [ ] **Database query ejecutada** correctamente con resultados precisos
-- [ ] **GitHub issue creado** con título apropiado
-- [ ] **Issue body contiene**:
-  - [ ] Summary count de productos afectados
-  - [ ] Tabla markdown con product details (ID, name, stock, price)
-  - [ ] Action items sugeridos
-- [ ] **Labels aplicados**: "inventory" y "urgent"
-- [ ] **URL compartido** para verificar el issue
+- [ ] **`claude -p` ejecutado** con éxito y respuesta directa en terminal
+- [ ] **Output formats probados**: al menos `--output-format json` y `--output-format text`
+- [ ] **Pipe con Unix** ejecutado: al menos un comando con `|` enviando datos a Claude
+- [ ] **Script batch** creado y ejecutado generando un reporte
+- [ ] **Slash commands** probados: al menos `/cost`, `/context` y uno más
 
 ### Resultado Esperado
 
-Deberías poder abrir el URL del GitHub issue y ver un reporte profesional y bien formateado con toda la información de inventario.
+Deberías entender cómo usar Claude Code como una herramienta CLI que se integra con tu flujo de trabajo existente — sin necesidad de configurar servicios externos, MCPs, ni APIs adicionales.
 
-**Comparar con solución**: Ver `solutions/exercise-2-mcp.sh` para scripts de setup
+**Comparar con solución**: Ver `solutions/exercise-2-cli.md`
 
 ### Variaciones (Si terminas rápido)
 
-**Variación A**: Agrega Slack notification
+**Variación A**: Crear un alias útil
 ```bash
-claude mcp add --transport http slack https://mcp.slack.com/
+# Agregar a ~/.bashrc o ~/.zshrc
+alias cr='claude -p "Review the git staged changes. Focus on bugs and security. Be concise."'
+
+# Ahora antes de cada commit:
+git add .
+cr
 ```
 
-Luego:
-```
-Additionally, send a Slack message to #inventory-alerts channel with a summary
+**Variación B**: Script de análisis de PR
+```bash
+# Comparar rama actual con main
+git diff main...HEAD | claude -p "Review this diff as a senior developer. Categorize feedback as: Must Fix, Should Fix, Nice to Have. Be specific with file:line references."
 ```
 
-**Variación B**: Automated re-stocking
-```
-For products with stock < 5, also:
-1. Check if there are pending orders (orders table)
-2. Suggest automatic re-stock quantity based on average sales (last 30 days)
-3. Update the GitHub issue with re-stock recommendations
+**Variación C**: Generador de tests
+```bash
+claude -p "Read src/services/products.service.js and generate unit tests using Jest. Cover happy path, edge cases, and error scenarios." --output-format text > tests/unit/products.generated.test.js
 ```
 
 ### Tips y Trucos
 
-- **@ mentions**: Puedes referenciar recursos MCP: `@db:table://products`
-- **Error handling**: Si un MCP server falla, Claude debería informarte claramente
-- **Permissions**: Algunos MCP servers requieren authentication - usa `/mcp` para verificar
-- **Debugging**: Si algo falla, pide a Claude que muestre las queries exactas que está ejecutando
+- **`-p` es tu mejor amigo**: Convierte cualquier tarea en un one-liner
+- **`--output-format json`**: Perfecto cuando necesitas parsear el resultado con `jq`
+- **Pipes bidireccionales**: Puedes enviar datos A Claude y recibir datos DE Claude
+- **Combina con `watch`**: `watch -n 60 'claude -p "Check if tests pass" --output-format text'`
+- **Timeout**: Usa `timeout 30 claude -p "..."` para limitar el tiempo de ejecución
 
 ### Troubleshooting
 
-**Problema**: "Cannot connect to database"
-**Solución**:
-```bash
-# Verifica que Docker está corriendo
-docker ps | grep postgres
+**Problema**: `claude -p` no retorna nada
+**Solución**: Verifica que estás autenticado con `claude auth status`. Si no, ejecuta `claude` y sigue el flujo de login.
 
-# Si no está, inicia:
-cd ecommerce-api
-docker-compose up -d
-```
+**Problema**: Output demasiado largo en terminal
+**Solución**: Usa `--output-format text` y redirige a archivo: `claude -p "..." --output-format text > output.md`
 
-**Problema**: "GitHub authentication failed"
-**Solución**:
-```bash
-# Verifica tu token
-echo $GITHUB_TOKEN
-
-# Re-configura el MCP server con header
-claude mcp add --transport http github https://api.githubcopilot.com/mcp/ \
-  --header "Authorization: Bearer $GITHUB_TOKEN"
-```
-
-**Problema**: Claude crea el issue pero no agrega labels
-**Solución**: Explícitamente menciona: "IMPORTANT: After creating the issue, add the labels in a separate API call"
+**Problema**: Pipe no envía datos correctamente
+**Solución**: Asegúrate de usar `2>&1` si quieres capturar stderr también: `npm test 2>&1 | claude -p "..."`
 
 ---
 
@@ -361,36 +345,24 @@ Scan for the following vulnerabilities:
 - Unencrypted sensitive data in database
 - Missing HTTPS enforcement
 
-### 4. XML External Entities (XXE)
-- XML parsing without disabling external entities
-- File upload without validation
-
-### 5. Broken Access Control
+### 4. Broken Access Control
 - Missing authorization checks
 - Insecure direct object references (IDOR)
 - Path traversal vulnerabilities
 - CORS misconfiguration
 
-### 6. Security Misconfiguration
+### 5. Security Misconfiguration
 - Default credentials
 - Unnecessary features enabled
 - Missing security headers
 - Verbose error messages revealing internals
 
-### 7. Cross-Site Scripting (XSS)
+### 6. Cross-Site Scripting (XSS)
 - Unescaped user input in templates
 - innerHTML usage with user data
 - Missing Content Security Policy
 
-### 8. Insecure Deserialization
-- Unvalidated deserialization
-- Pickle/marshal usage with untrusted data
-
-### 9. Using Components with Known Vulnerabilities
-- Outdated dependencies
-- Unpatched libraries
-
-### 10. Insufficient Logging & Monitoring
+### 7. Insufficient Logging & Monitoring
 - Missing audit logs for sensitive operations
 - No rate limiting
 - Lack of intrusion detection
@@ -422,24 +394,6 @@ Report findings organized by severity:
 3. **Explain impact**: Describe the real-world attack scenario
 4. **Provide fixes**: Give concrete code examples of how to fix
 5. **Prioritize correctly**: Critical = exploitable now, High = soon, Medium = defense-in-depth, Low = hardening
-
-## Example Finding
-
-### Critical
-- **SQL Injection**: Raw string concatenation in database query
-  - **File**: `src/services/products.service.js:45`
-  - **Code**:
-    ```javascript
-    const sql = `SELECT * FROM products WHERE name LIKE '%${query}%'`;
-    ```
-  - **Impact**: Attacker can execute arbitrary SQL, dump entire database, or modify data
-  - **Fix**: Use parameterized queries:
-    ```javascript
-    const results = await db.query(
-      'SELECT * FROM products WHERE name LIKE $1',
-      [`%${query}%`]
-    );
-    ```
 
 Start your audit now. Be thorough but focus on exploitable vulnerabilities first.
 ```
@@ -479,7 +433,7 @@ El agent debería identificar al menos estos problemas intencionales:
 
 - [ ] **Agent creado** con configuration válida
 - [ ] **Frontmatter correcto**: name, description, tools, model, permissionMode
-- [ ] **System prompt completo** con OWASP Top 10 checklist
+- [ ] **System prompt completo** con OWASP checklist
 - [ ] **Agent se invoca** exitosamente cuando usas prompts relacionados con security
 - [ ] **Findings reportados** con:
   - [ ] Severity levels (Critical, High, Medium, Low)
@@ -543,7 +497,7 @@ Agrega sección en el system prompt:
 
 ### Contexto
 
-Tu equipo tiene standards específicos para code reviews. Quieres crear un skill que automáticamente revise código según estos standards y se invoque cuando alguien pide un code review.
+Tu equipo tiene standards específicos para code reviews. Quieres crear un skill que automáticamente revise código según estos standards y se invoque con `/code-review`.
 
 ### Standards del Equipo (Para este ejercicio)
 
@@ -610,12 +564,12 @@ You are a senior code reviewer ensuring high standards across the codebase.
   - Template literals over string concatenation
 
 ### Security Requirements
-- ❌ No hardcoded secrets (API keys, passwords, tokens)
-- ✅ All user input validated before use
-- ✅ Database queries parameterized (no string concat)
-- ✅ Proper error handling (don't expose internals)
-- ✅ Authentication checks on protected routes
-- ✅ CORS configured with explicit origins
+- No hardcoded secrets (API keys, passwords, tokens)
+- All user input validated before use
+- Database queries parameterized (no string concat)
+- Proper error handling (don't expose internals)
+- Authentication checks on protected routes
+- CORS configured with explicit origins
 
 ### Testing Requirements
 - Minimum 80% code coverage for new code
@@ -642,40 +596,26 @@ You are a senior code reviewer ensuring high standards across the codebase.
 
 Structure your review as:
 
-### ✅ Passes
+### Passes
 - [List things that meet standards well]
 - [Compliment good practices]
 
-### ⚠️ Warnings (Should Fix)
+### Warnings (Should Fix)
 - **[Category - File:Line]**: Issue description
   - Current code: `code snippet`
   - Suggestion: `improved code` or explanation
   - Priority: Medium
 
-### ❌ Must Fix (Blocking Issues)
+### Must Fix (Blocking Issues)
 - **[Category - File:Line]**: Issue description
   - Current code: `code snippet`
   - Fix: `corrected code` or clear instructions
   - Priority: High/Critical
 
-### 📊 Summary
+### Summary
 - **Total issues**: X warnings, Y must-fix
 - **Test coverage**: X% (target: 80%+)
 - **Recommendation**: Approve / Request Changes / Needs Discussion
-
-## Examples
-
-### Good Finding
-❌ **Security - auth.controller.js:45**: Hardcoded JWT secret
-- Current: `const secret = "my-secret-key-123"`
-- Fix: `const secret = process.env.JWT_SECRET`
-- Priority: Critical
-
-⚠️ **Style - users.service.js:120**: Function too long (75 lines)
-- Suggestion: Extract validation logic into separate function
-- Priority: Medium
-
-✅ **Good Practice**: Comprehensive error handling in `products.controller.js`
 
 Be thorough, specific, and constructive in your feedback.
 ```
@@ -688,14 +628,14 @@ cd ecommerce-api
 claude
 ```
 
-Invoca el skill implícitamente:
+Invoca el skill con el slash command:
 ```
-> Review the authentication code for our team standards
+> /code-review
 ```
 
-O explícitamente:
+O implícitamente:
 ```
-> Use the code-review skill to analyze src/controllers/auth.controller.js
+> Review the authentication code for our team standards
 ```
 
 #### Paso 4: Verificar el Output
@@ -709,7 +649,7 @@ El skill debería revisar el código y dar feedback estructurado según el forma
 - [ ] **Standards documentados** claramente (Style, Security, Testing, Docs)
 - [ ] **Review process** defined
 - [ ] **Output format** estructurado (Passes, Warnings, Must Fix, Summary)
-- [ ] **Skill se invoca** cuando mencionas "code review" o similar
+- [ ] **Skill se invoca** con `/code-review` o cuando mencionas "code review"
 - [ ] **Review output incluye**:
   - [ ] Categorización por severity
   - [ ] File paths y line numbers
@@ -719,7 +659,7 @@ El skill debería revisar el código y dar feedback estructurado según el forma
 
 ### Resultado Esperado
 
-Un code review automático que se siente como feedback de un senior developer del equipo.
+Un code review automático que se siente como feedback de un senior developer del equipo, invocable con un simple `/code-review`.
 
 **Comparar con solución**: Ver `solutions/exercise-4-skill.md`
 
@@ -749,24 +689,12 @@ Agrega sección custom para tu tech stack:
 - Use helmet for security headers
 ```
 
-**Variación C**: Auto-fix skill
-Cambia allowed-tools a include Write, Edit:
-```yaml
-allowed-tools: Read, Grep, Glob, Write, Edit
-```
-
-Luego agrega al system prompt:
-```markdown
-After identifying issues, ask user: "Should I fix these automatically?"
-If yes, make the changes and explain what you fixed.
-```
-
 ### Tips y Trucos
 
+- **Slash commands**: El skill se puede invocar directamente con `/code-review`
 - **Specificity**: Cuanto más específicos los standards, mejor el review
 - **Examples**: Incluir good/bad code examples ayuda mucho
 - **Tool restrictions**: allowed-tools hace el skill read-only (seguro)
-- **Auto-invocation**: El description field debe incluir keywords que matches common prompts
 - **Iteration**: Refina el skill basándote en feedback real de reviews
 
 ### Troubleshooting
@@ -782,238 +710,213 @@ If yes, make the changes and explain what you fixed.
 
 ---
 
-## Ejercicio 5: CI/CD Automation (Bonus)
+## Ejercicio 5: Automation con Hooks y Scripts
 
-**Tiempo**: 5-7 minutos
+**Tiempo**: 7 minutos
 **Dificultad**: ⭐⭐
-**Objetivo**: Automatizar code reviews y checks en CI/CD pipeline
+**Objetivo**: Automatizar tareas de desarrollo usando hooks de Claude Code y scripts CLI
 
 ### Contexto
 
-Quieres integrar Claude Code en tu CI/CD pipeline para automation tasks como:
-- Pre-commit hooks para catch issues early
-- PR reviews automáticas
-- Translation de strings nuevos
+Quieres integrar Claude Code en tu workflow diario de desarrollo usando:
+- **Hooks**: Acciones automáticas que se ejecutan antes/después de ciertas operaciones de Claude
+- **Scripts npm**: Tareas automatizadas invocables desde terminal
+- **Aliases**: Atajos para operaciones frecuentes
 
 ### Instrucciones Paso a Paso
 
-#### Paso 1: Pre-commit Hook (npm script)
+#### Paso 1: Configurar hooks en settings.json
 
-Edita `ecommerce-api/package.json` y agrega:
+Edita `.claude/settings.json` para agregar hooks útiles:
+
+```json
+{
+  "permissions": {
+    "defaultMode": "default",
+    "rules": [
+      {
+        "working_directory": "ecommerce-api/tests/**",
+        "defaultMode": "acceptEdits"
+      }
+    ]
+  },
+  "hooks": {
+    "PostToolUse": [
+      {
+        "matcher": "Write|Edit",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "echo '[Hook] File modified: $CLAUDE_FILE_PATH at $(date)' >> /tmp/claude-audit.log"
+          }
+        ]
+      }
+    ],
+    "Stop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "echo '[Session ended at $(date)]' >> /tmp/claude-audit.log"
+          }
+        ]
+      }
+    ]
+  }
+}
+```
+
+#### Paso 2: Scripts npm para desarrollo
+
+Edita `ecommerce-api/package.json` y agrega scripts que usan Claude CLI:
 
 ```json
 {
   "scripts": {
-    "pre-commit": "claude -p 'Review staged changes for security issues and code style. Be concise and focus on critical issues only.'",
-    "pre-push": "claude -p 'Run all tests and verify they pass. If any fail, block the push and explain what failed.'",
-    "lint:claude": "claude -p 'Analyze the codebase for code style issues following .eslintrc rules. Output as JSON for parsing.'"
+    "review": "claude -p 'Review the git staged changes for security issues and code style. Be concise and focus on critical issues only.' --output-format text",
+    "explain": "claude -p 'Explain the architecture of this project in 5 bullet points. Focus on patterns used and key design decisions.' --output-format text",
+    "audit:security": "claude -p 'Scan src/ for OWASP Top 10 vulnerabilities. Report as: SEVERITY | FILE:LINE | ISSUE | FIX. Be concise.' --output-format text",
+    "audit:deps": "npm audit --json 2>/dev/null | claude -p 'Analyze this npm audit output. Prioritize by severity. Suggest which to fix now vs later.' --output-format text"
   }
 }
 ```
 
 **Probar**:
 ```bash
-# Stage some changes
-git add src/controllers/auth.controller.js
-
-# Run pre-commit check
-npm run pre-commit
-```
-
-#### Paso 2: GitHub Actions PR Review
-
-Crea `.github/workflows/claude-review.yml`:
-
-```yaml
-name: Claude Code Review
-
-on:
-  pull_request:
-    types: [opened, synchronize]
-
-jobs:
-  review:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v3
-        with:
-          fetch-depth: 0  # Full history for diff
-
-      - name: Setup Claude Code
-        run: |
-          curl -fsSL https://claude.ai/install.sh | bash
-          echo "$HOME/.claude/bin" >> $GITHUB_PATH
-
-      - name: Authenticate Claude
-        env:
-          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
-        run: |
-          claude config set apiKey $ANTHROPIC_API_KEY
-
-      - name: Review PR
-        id: review
-        run: |
-          REVIEW=$(claude -p "Review the changes in this PR vs the base branch. Focus on:
-          1. Security issues
-          2. Code style violations
-          3. Missing tests
-          4. Performance concerns
-
-          Output as markdown for GitHub comment." --output-format text)
-
-          echo "review<<EOF" >> $GITHUB_OUTPUT
-          echo "$REVIEW" >> $GITHUB_OUTPUT
-          echo "EOF" >> $GITHUB_OUTPUT
-
-      - name: Comment on PR
-        uses: actions/github-script@v6
-        with:
-          script: |
-            github.rest.issues.createComment({
-              issue_number: context.issue.number,
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              body: '## Claude Code Review\n\n${{ steps.review.outputs.review }}'
-            })
-```
-
-#### Paso 3: Automated Translation Script
-
-Crea `scripts/auto-translate.sh`:
-
-```bash
-#!/bin/bash
-
-# Find new strings in English locale that don't exist in other locales
-claude -p "
-Compare src/locales/en.json with:
-- src/locales/es.json
-- src/locales/fr.json
-- src/locales/de.json
-
-For any keys that exist in en.json but not in other files:
-1. Translate the string appropriately
-2. Add it to the respective locale file
-3. Maintain the JSON structure
-4. Commit the changes with message 'chore: auto-translate missing locale strings'
-
-Be careful to preserve existing keys and formatting.
-"
-```
-
-Hacer el script ejecutable:
-```bash
-chmod +x scripts/auto-translate.sh
-```
-
-#### Paso 4: Log Monitoring Script
-
-Crea `scripts/monitor-logs.sh`:
-
-```bash
-#!/bin/bash
-
-# Monitor application logs for anomalies
-tail -f logs/app.log | claude -p "
-Monitor this log stream for:
-- Error patterns (repeated errors, unusual errors)
-- Performance issues (slow response times)
-- Security concerns (failed auth attempts, suspicious IPs)
-- Anomalies (unusual traffic patterns)
-
-When you detect an issue:
-1. Alert me with a summary
-2. Suggest investigation steps
-3. Recommend remediation
-
-Be vigilant but avoid false positives on normal operations.
-"
-```
-
-#### Paso 5: Probar las Automations
-
-**Pre-commit**:
-```bash
-# Make a change with intentional issues
-echo "const password = '12345';" >> src/config/secrets.js
-git add src/config/secrets.js
-npm run pre-commit
-```
-
-**Translation** (si tienes locale files):
-```bash
-./scripts/auto-translate.sh
-```
-
-**Log monitoring** (simulado):
-```bash
-# En una terminal
 cd ecommerce-api
-npm run dev
 
-# En otra terminal
-./scripts/monitor-logs.sh
+# Revisar cambios staged
+git add src/controllers/auth.controller.js
+npm run review
+
+# Auditoría de seguridad rápida
+npm run audit:security
+```
+
+#### Paso 3: Crear CLAUDE.md para memoria del proyecto
+
+Crea un archivo `CLAUDE.md` en la raíz del proyecto para que Claude recuerde el contexto:
+
+```bash
+cd ecommerce-api
+```
+
+Crea `CLAUDE.md`:
+```markdown
+# Project Context
+
+## Tech Stack
+- Node.js 18+ with Express.js
+- PostgreSQL with Prisma ORM
+- Jest for testing
+- ESLint for linting
+
+## Code Standards
+- Use async/await, never callbacks
+- Parameterized queries only (no string concatenation in SQL)
+- All endpoints must validate input
+- Minimum 80% test coverage for new code
+
+## Common Commands
+- `npm test` - Run tests
+- `npm run lint` - Run linter
+- `npm run dev` - Start dev server
+
+## Known Issues
+- SQL injection in products.service.js (intentional for workshop)
+- Hardcoded secrets in .env (intentional for workshop)
+- Missing input validation in users.controller.js (intentional for workshop)
+```
+
+#### Paso 4: Probar el workflow completo
+
+Inicia Claude Code y verifica que todo funciona:
+
+```bash
+cd ecommerce-api
+claude
+```
+
+Dentro de la sesión:
+```
+> What are the known issues in this project?
+# Claude debería leer CLAUDE.md y responder con los known issues
+
+> /code-review
+# Debería invocar el skill del ejercicio 4
+
+> Make a small change to fix the input validation in users.controller.js
+# Los hooks deberían registrar el cambio en /tmp/claude-audit.log
+```
+
+Verifica los hooks:
+```bash
+cat /tmp/claude-audit.log
 ```
 
 ### Criterios de Éxito
 
-- [ ] **npm scripts agregados** para pre-commit, pre-push, lint
-- [ ] **GitHub Actions workflow** creado para PR reviews
-- [ ] **Scripts de automation** creados y executable
+- [ ] **Hooks configurados** en settings.json
+- [ ] **npm scripts** agregados para review y audit
+- [ ] **CLAUDE.md** creado con contexto del proyecto
 - [ ] **Al menos 1 script probado** exitosamente
-- [ ] **Documentation** de cómo usar cada automation
+- [ ] **Hooks ejecutándose**: verificar con `cat /tmp/claude-audit.log`
 
 ### Resultado Esperado
 
-Automation pipeline que integra Claude Code en tu development workflow, catching issues early y automatizando tareas repetitivas.
+Un workflow de desarrollo donde Claude Code se integra automáticamente en tu proceso — hooks que registran cambios, scripts rápidos para review y auditoría, y memoria persistente del proyecto.
 
-**Comparar con solución**: Ver `solutions/exercise-5-ci.md`
+**Comparar con solución**: Ver `solutions/exercise-5-automation.md`
 
 ### Variaciones (Si terminas rápido)
 
-**Variación A**: Husky integration
-```bash
-npm install --save-dev husky
-npx husky install
-npx husky add .husky/pre-commit "npm run pre-commit"
-```
-
-**Variación B**: Release notes generator
-```bash
-claude -p "Generate release notes for version $(cat package.json | grep version | cut -d '"' -f 4) based on git commits since last tag. Format as markdown with categories: Features, Bug Fixes, Performance, Breaking Changes."
-```
-
-**Variación C**: Dependency audit
+**Variación A**: Hook que corre linter automáticamente
 ```json
 {
-  "scripts": {
-    "audit:claude": "npm audit --json | claude -p 'Analyze this npm audit output. Prioritize vulnerabilities by severity and impact. Suggest which ones to fix immediately vs can wait.'"
+  "hooks": {
+    "PostToolUse": [
+      {
+        "matcher": "Write|Edit",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "cd ecommerce-api && npx eslint $CLAUDE_FILE_PATH --fix 2>/dev/null || true"
+          }
+        ]
+      }
+    ]
   }
 }
 ```
 
+**Variación B**: Script de release notes
+```bash
+# Agregar a package.json
+"release-notes": "git log $(git describe --tags --abbrev=0)..HEAD --oneline | claude -p 'Generate release notes from these commits. Categorize as: Features, Fixes, Other. Use markdown format.' --output-format text"
+```
+
 ### Tips y Trucos
 
-- **Unix philosophy**: Claude Code se integra bien con pipes (`|`)
-- **Output formats**: Usa `--output-format json` para parseable output
-- **API keys**: En CI, usa secrets/environment variables
-- **Cost management**: Set thinking budget en CI: `export MAX_THINKING_TOKENS=5000`
-- **Error handling**: Wrap Claude commands en scripts con proper error handling
+- **CLAUDE.md**: Es lo primero que Claude lee al iniciar — úsalo para dar contexto
+- **Hooks son shell commands**: Pueden hacer cualquier cosa que harías en terminal
+- **`--output-format text`**: Ideal para scripts que necesitan output limpio
+- **Combina con git hooks**: Husky + claude CLI = pre-commit reviews automáticos
+- **Matchers**: `Write|Edit` captura modificaciones, usa `Bash` para capturar comandos
 
 ### Troubleshooting
 
-**Problema**: API key not found en CI
-**Solución**: Asegúrate que el secret ANTHROPIC_API_KEY está configurado en GitHub repo settings
+**Problema**: Hooks no se ejecutan
+**Solución**: Verifica que el `matcher` coincide con la tool que Claude está usando. Los matchers son case-sensitive.
 
-**Problema**: Command hangs en CI
-**Solución**: Agrega timeout: `timeout 300 claude -p "..."`
+**Problema**: CLAUDE.md no se lee automáticamente
+**Solución**: Debe estar en la raíz del directorio donde inicias `claude`. Verifica con `/memory`.
 
-**Problema**: Output muy verbose para CI logs
-**Solución**: Usa `--output-format json` y parse solo lo necesario
+**Problema**: Scripts npm tardan mucho
+**Solución**: Agrega `--max-turns 1` al comando claude para limitar la interacción: `claude -p "..." --max-turns 1`
 
 ---
 
-## 🎉 ¡Completaste todos los ejercicios!
+## Completaste todos los ejercicios!
 
 ### Próximos Pasos
 
@@ -1024,19 +927,18 @@ claude -p "Generate release notes for version $(cat package.json | grep version 
 
 ### Recursos Adicionales
 
-- [Claude Code Documentation](https://code.claude.com/docs/)
-- [MCP Servers Repository](https://github.com/modelcontextprotocol/servers)
+- [Claude Code Documentation](https://docs.anthropic.com/en/docs/claude-code)
 - [Community Examples](https://github.com/anthropics/claude-code-examples)
 
 ### Feedback
 
-¿Cómo fue tu experiencia con estos ejercicios?
-- ¿Qué ejercicio fue más útil?
-- ¿Qué fue más desafiante?
-- ¿Qué te gustaría ver en futuros workshops?
+Cómo fue tu experiencia con estos ejercicios?
+- Qué ejercicio fue más útil?
+- Qué fue más desafiante?
+- Qué te gustaría ver en futuros workshops?
 
 [Link a formulario de feedback]
 
 ---
 
-**¡Gracias por participar en el Claude Code Workshop!** 🚀
+**Gracias por participar en el Claude Code Workshop!**
